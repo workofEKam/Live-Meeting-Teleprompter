@@ -72,6 +72,17 @@
       <input type="color" id="fontColor" value="#ffffff">
     </div>
 
+
+    <div class="setting-group">
+      <label>Groq API Key</label>
+      <input type="password" id="groqApiKey" placeholder="gsk_...">
+    </div>
+
+    <div class="setting-group">
+      <label>Groq Context (System Prompt)</label>
+      <textarea id="groqContext" rows="3" style="width: 100%; margin-bottom: 5px;"></textarea>
+    </div>
+
     <div class="setting-group">
       <label>Hotkeys</label>
       <div class="status">Click "Record" and press combination (e.g. Cmd+Shift+Up)</div>
@@ -99,7 +110,14 @@
         <input type="text" id="hk-settings" readonly value="CommandOrControl+Option+S">
         <button onclick="recordHotkey('hk-settings')">Record</button>
       </div>
+
+      <div class="hotkey-input">
+        <label style="width: 80px;">Ask Groq:</label>
+        <input type="text" id="hk-askGroq" readonly value="CommandOrControl+Option+G">
+        <button onclick="recordHotkey('hk-askGroq')">Record</button>
+      </div>
     </div>
+
 
     <script>
       require('../dist/settingsRenderer.js');

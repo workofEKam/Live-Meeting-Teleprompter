@@ -37,3 +37,7 @@ electron_1.ipcRenderer.on('update-settings', (event, settings) => {
 });
 // Update initial setup
 console.log('Renderer started, listening for IPC.');
+electron_1.ipcRenderer.on('set-prompter-text', (event, text) => {
+    textArea.value = text;
+    textArea.scrollTop = 0; // Reset scroll position to top
+});

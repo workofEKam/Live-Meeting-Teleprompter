@@ -1,9 +1,10 @@
-import { app, BrowserWindow, globalShortcut, ipcMain } from 'electron';
+import { app, BrowserWindow, globalShortcut, ipcMain, screen, session } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs';
 
 let teleprompterWindow: BrowserWindow | null = null;
 let settingsWindow: BrowserWindow | null = null;
+let transcriptionWindow: BrowserWindow | null = null;
 
 const configPath = path.join(app.getPath('userData'), 'config.json');
 
@@ -12,13 +13,16 @@ let config = {
   settings: {
     transparency: 0.5,
     fontSize: 24,
-    fontColor: '#ffffff'
+    fontColor: '#ffffff',
+    groqApiKey: '',
+    groqContext: 'You are a helpful software engineering assistant...'
   },
   hotkeys: {
     up: 'CommandOrControl+Option+Up',
     down: 'CommandOrControl+Option+Down',
     auto: 'CommandOrControl+Option+Space',
-    settings: 'CommandOrControl+Option+S'
+    settings: 'CommandOrControl+Option+S',
+    askGroq: 'CommandOrControl+Option+G'
   }
 };
 
@@ -43,6 +47,13 @@ function saveConfig() {
 
 function registerHotkeys() {
   globalShortcut.unregisterAll();
+
+  if (config.hotkeys.askGroq) {
+    globalShortcut.register(config.hotkeys.askGroq, () => {
+      transcriptionWindow?.webContents.send('get-transcription');
+    });
+  }
+
   
   if (config.hotkeys.up) {
     globalShortcut.register(config.hotkeys.up, () => {
@@ -87,6 +98,7 @@ function createTeleprompterWindow() {
   });
 
   teleprompterWindow.setContentProtection(true);
+  teleprompterWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
   teleprompterWindow.loadFile(path.join(__dirname, '../src/index.html'));
   
   teleprompterWindow.webContents.on('did-finish-load', () => {
@@ -95,6 +107,35 @@ function createTeleprompterWindow() {
 
   teleprompterWindow.on('closed', () => {
     teleprompterWindow = null;
+  });
+}
+
+
+function createTranscriptionWindow() {
+  if (transcriptionWindow) return;
+
+  const primaryDisplay = screen.getPrimaryDisplay();
+  const { width, height } = primaryDisplay.workAreaSize;
+  const windowWidth = 400;
+
+  transcriptionWindow = new BrowserWindow({
+    width: windowWidth,
+    height: height,
+    x: width - windowWidth,
+    y: 0,
+    title: "Live Transcription",
+    alwaysOnTop: true,
+    webPreferences: {
+      nodeIntegration: true,
+      contextIsolation: false,
+    },
+  });
+
+  transcriptionWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+  transcriptionWindow.loadFile(path.join(__dirname, '../src/transcription.html'));
+
+  transcriptionWindow.on('closed', () => {
+    transcriptionWindow = null;
   });
 }
 
@@ -125,6 +166,49 @@ function createSettingsWindow() {
 }
 
 // IPC Handlers
+
+ipcMain.on('transcription-result', async (event, text) => {
+  if (!text || text.trim() === "") {
+    teleprompterWindow?.webContents.send('set-prompter-text', "No transcription text available to ask Groq.");
+    return;
+  }
+
+  if (!config.settings.groqApiKey) {
+    teleprompterWindow?.webContents.send('set-prompter-text', "Please set your Groq API Key in Settings.");
+    return;
+  }
+
+  teleprompterWindow?.webContents.send('set-prompter-text', "Thinking...");
+
+  try {
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${config.settings.groqApiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: 'llama3-8b-8192',
+        messages: [
+          { role: 'system', content: config.settings.groqContext },
+          { role: 'user', content: text }
+        ]
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Groq API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const answer = data.choices[0].message.content;
+    teleprompterWindow?.webContents.send('set-prompter-text', answer);
+  } catch (error: any) {
+    console.error("Failed to fetch from Groq:", error);
+    teleprompterWindow?.webContents.send('set-prompter-text', `Error: ${error.message}`);
+  }
+});
+
 ipcMain.on('save-settings', (event, newSettings) => {
   config.settings = { ...config.settings, ...newSettings };
   saveConfig();
@@ -144,8 +228,19 @@ app.on('ready', () => {
   if (app.dock) {
     app.dock.hide();
   }
+
+  session.defaultSession.setPermissionRequestHandler((webContents, permission, callback) => {
+    if (permission === 'media') {
+      // Approving microphone permission automatically
+      callback(true);
+    } else {
+      callback(false);
+    }
+  });
+
   loadConfig();
   createTeleprompterWindow();
+  createTranscriptionWindow();
   registerHotkeys();
 });
 

@@ -4,6 +4,9 @@ const transparencyInput = document.getElementById('transparency') as HTMLInputEl
 const transparencyVal = document.getElementById('transparency-val') as HTMLDivElement;
 const fontSizeInput = document.getElementById('fontSize') as HTMLInputElement;
 const fontColorInput = document.getElementById('fontColor') as HTMLInputElement;
+const groqApiKeyInput = document.getElementById('groqApiKey') as HTMLInputElement;
+const groqContextInput = document.getElementById('groqContext') as HTMLTextAreaElement;
+
 
 // Debounce helper
 function debounce(func: Function, wait: number) {
@@ -23,6 +26,8 @@ const sendSettingsUpdate = debounce(() => {
     transparency: parseFloat(transparencyInput.value),
     fontSize: parseInt(fontSizeInput.value, 10),
     fontColor: fontColorInput.value,
+    groqApiKey: groqApiKeyInput.value,
+    groqContext: groqContextInput.value,
   };
   ipcRenderer.send('save-settings', settings);
 }, 200);
@@ -34,6 +39,8 @@ transparencyInput.addEventListener('input', () => {
 
 fontSizeInput.addEventListener('input', sendSettingsUpdate);
 fontColorInput.addEventListener('input', sendSettingsUpdate);
+groqApiKeyInput.addEventListener('input', sendSettingsUpdate);
+groqContextInput.addEventListener('input', sendSettingsUpdate);
 
 
 // Hotkey Recording Logic
@@ -87,6 +94,7 @@ document.addEventListener('keydown', (e) => {
     down: (document.getElementById('hk-down') as HTMLInputElement).value,
     auto: (document.getElementById('hk-auto') as HTMLInputElement).value,
     settings: (document.getElementById('hk-settings') as HTMLInputElement).value,
+    askGroq: (document.getElementById('hk-askGroq') as HTMLInputElement).value,
   };
   ipcRenderer.send('save-hotkeys', hotkeys);
 });
@@ -104,12 +112,19 @@ ipcRenderer.on('load-settings', (event, data) => {
         if (data.settings.fontColor !== undefined) {
             fontColorInput.value = data.settings.fontColor;
         }
+        if (data.settings.groqApiKey !== undefined) {
+            groqApiKeyInput.value = data.settings.groqApiKey;
+        }
+        if (data.settings.groqContext !== undefined) {
+            groqContextInput.value = data.settings.groqContext;
+        }
     }
     if (data.hotkeys) {
         if (data.hotkeys.up) (document.getElementById('hk-up') as HTMLInputElement).value = data.hotkeys.up;
         if (data.hotkeys.down) (document.getElementById('hk-down') as HTMLInputElement).value = data.hotkeys.down;
         if (data.hotkeys.auto) (document.getElementById('hk-auto') as HTMLInputElement).value = data.hotkeys.auto;
         if (data.hotkeys.settings) (document.getElementById('hk-settings') as HTMLInputElement).value = data.hotkeys.settings;
+        if (data.hotkeys.askGroq) (document.getElementById('hk-askGroq') as HTMLInputElement).value = data.hotkeys.askGroq;
     }
 });
 
