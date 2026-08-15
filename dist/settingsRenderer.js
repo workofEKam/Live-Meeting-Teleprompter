@@ -1,0 +1,114 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const electron_1 = require("electron");
+const transparencyInput = document.getElementById('transparency');
+const transparencyVal = document.getElementById('transparency-val');
+const fontSizeInput = document.getElementById('fontSize');
+const fontColorInput = document.getElementById('fontColor');
+// Debounce helper
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+const sendSettingsUpdate = debounce(() => {
+    const settings = {
+        transparency: parseFloat(transparencyInput.value),
+        fontSize: parseInt(fontSizeInput.value, 10),
+        fontColor: fontColorInput.value,
+    };
+    electron_1.ipcRenderer.send('save-settings', settings);
+}, 200);
+transparencyInput.addEventListener('input', () => {
+    transparencyVal.innerText = transparencyInput.value;
+    sendSettingsUpdate();
+});
+fontSizeInput.addEventListener('input', sendSettingsUpdate);
+fontColorInput.addEventListener('input', sendSettingsUpdate);
+// Hotkey Recording Logic
+let isRecording = false;
+let currentTargetId = null;
+window.recordHotkey = (targetId) => {
+    if (isRecording)
+        return;
+    isRecording = true;
+    currentTargetId = targetId;
+    const input = document.getElementById(targetId);
+    input.value = "Press keys...";
+    input.focus();
+};
+document.addEventListener('keydown', (e) => {
+    if (!isRecording || !currentTargetId)
+        return;
+    e.preventDefault();
+    // Ignore bare modifier presses
+    if (['Meta', 'Control', 'Alt', 'Shift'].includes(e.key)) {
+        return;
+    }
+    let keys = [];
+    if (e.metaKey)
+        keys.push('Command');
+    if (e.ctrlKey)
+        keys.push('Control');
+    if (e.altKey)
+        keys.push('Option');
+    if (e.shiftKey)
+        keys.push('Shift');
+    // Convert key names for Electron
+    let mainKey = e.key.toUpperCase();
+    if (mainKey === ' ')
+        mainKey = 'Space';
+    else if (mainKey === 'ARROWUP')
+        mainKey = 'Up';
+    else if (mainKey === 'ARROWDOWN')
+        mainKey = 'Down';
+    else if (mainKey === 'ARROWLEFT')
+        mainKey = 'Left';
+    else if (mainKey === 'ARROWRIGHT')
+        mainKey = 'Right';
+    keys.push(mainKey);
+    const hotkeyString = keys.join('+');
+    const input = document.getElementById(currentTargetId);
+    input.value = hotkeyString;
+    isRecording = false;
+    currentTargetId = null;
+    // Send new hotkeys to main process
+    const hotkeys = {
+        up: document.getElementById('hk-up').value,
+        down: document.getElementById('hk-down').value,
+        auto: document.getElementById('hk-auto').value,
+        settings: document.getElementById('hk-settings').value,
+    };
+    electron_1.ipcRenderer.send('save-hotkeys', hotkeys);
+});
+// Load initial settings
+electron_1.ipcRenderer.on('load-settings', (event, data) => {
+    if (data.settings) {
+        if (data.settings.transparency !== undefined) {
+            transparencyInput.value = data.settings.transparency.toString();
+            transparencyVal.innerText = transparencyInput.value;
+        }
+        if (data.settings.fontSize !== undefined) {
+            fontSizeInput.value = data.settings.fontSize.toString();
+        }
+        if (data.settings.fontColor !== undefined) {
+            fontColorInput.value = data.settings.fontColor;
+        }
+    }
+    if (data.hotkeys) {
+        if (data.hotkeys.up)
+            document.getElementById('hk-up').value = data.hotkeys.up;
+        if (data.hotkeys.down)
+            document.getElementById('hk-down').value = data.hotkeys.down;
+        if (data.hotkeys.auto)
+            document.getElementById('hk-auto').value = data.hotkeys.auto;
+        if (data.hotkeys.settings)
+            document.getElementById('hk-settings').value = data.hotkeys.settings;
+    }
+});

@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>Teleprompter Settings</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        padding: 20px;
+        background-color: #f5f5f5;
+        color: #333;
+      }
+      h2 { margin-top: 0; }
+      .setting-group {
+        margin-bottom: 20px;
+        background: white;
+        padding: 15px;
+        border-radius: 8px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      }
+      label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: 500;
+      }
+      input[type="range"], input[type="color"], input[type="number"] {
+        width: 100%;
+        margin-bottom: 5px;
+      }
+      .hotkey-input {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        margin-bottom: 10px;
+      }
+      .hotkey-input input {
+        flex: 1;
+        padding: 8px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+      }
+      .hotkey-input button {
+        padding: 8px 12px;
+        background: #007bff;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+      .hotkey-input button:hover {
+        background: #0056b3;
+      }
+      .status { font-size: 12px; color: #666; }
+    </style>
+  </head>
+  <body>
+    <h2>Settings</h2>
+    
+    <div class="setting-group">
+      <label>Window Transparency</label>
+      <input type="range" id="transparency" min="0" max="1" step="0.1" value="0.5">
+      <div class="status" id="transparency-val">0.5</div>
+    </div>
+
+    <div class="setting-group">
+      <label>Font Size (px)</label>
+      <input type="number" id="fontSize" min="12" max="100" value="24">
+    </div>
+
+    <div class="setting-group">
+      <label>Font Color</label>
+      <input type="color" id="fontColor" value="#ffffff">
+    </div>
+
+    <div class="setting-group">
+      <label>Hotkeys</label>
+      <div class="status">Click "Record" and press combination (e.g. Cmd+Shift+Up)</div>
+      
+      <div class="hotkey-input">
+        <label style="width: 80px;">Scroll Up:</label>
+        <input type="text" id="hk-up" readonly value="CommandOrControl+Option+Up">
+        <button onclick="recordHotkey('hk-up')">Record</button>
+      </div>
+
+      <div class="hotkey-input">
+        <label style="width: 80px;">Scroll Down:</label>
+        <input type="text" id="hk-down" readonly value="CommandOrControl+Option+Down">
+        <button onclick="recordHotkey('hk-down')">Record</button>
+      </div>
+
+      <div class="hotkey-input">
+        <label style="width: 80px;">Auto Scroll:</label>
+        <input type="text" id="hk-auto" readonly value="CommandOrControl+Option+Space">
+        <button onclick="recordHotkey('hk-auto')">Record</button>
+      </div>
+      
+      <div class="hotkey-input">
+        <label style="width: 80px;">Settings:</label>
+        <input type="text" id="hk-settings" readonly value="CommandOrControl+Option+S">
+        <button onclick="recordHotkey('hk-settings')">Record</button>
+      </div>
+    </div>
+
+    <script>
+      require('../dist/settingsRenderer.js');
+    </script>
+  </body>
+</html>
