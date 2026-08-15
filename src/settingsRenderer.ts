@@ -7,7 +7,6 @@ const fontColorInput = document.getElementById('fontColor') as HTMLInputElement;
 const groqApiKeyInput = document.getElementById('groqApiKey') as HTMLInputElement;
 const groqContextInput = document.getElementById('groqContext') as HTMLTextAreaElement;
 
-
 // Debounce helper
 function debounce(func: Function, wait: number) {
   let timeout: any;
@@ -46,18 +45,26 @@ groqContextInput.addEventListener('input', sendSettingsUpdate);
 // Hotkey Recording Logic
 let isRecording = false;
 let currentTargetId: string | null = null;
+let currentDisplayId: string | null = null;
+let currentBtnId: string | null = null;
 
-(window as any).recordHotkey = (targetId: string) => {
+(window as any).recordHotkey = (targetId: string, displayId: string, btnId: string) => {
   if (isRecording) return;
   isRecording = true;
   currentTargetId = targetId;
-  const input = document.getElementById(targetId) as HTMLInputElement;
-  input.value = "Press keys...";
-  input.focus();
+  currentDisplayId = displayId;
+  currentBtnId = btnId;
+
+  const display = document.getElementById(displayId) as HTMLDivElement;
+  const btn = document.getElementById(btnId) as HTMLButtonElement;
+
+  display.innerText = "Press...";
+  btn.classList.add('btn-recording');
+  btn.innerText = "Recording";
 };
 
 document.addEventListener('keydown', (e) => {
-  if (!isRecording || !currentTargetId) return;
+  if (!isRecording || !currentTargetId || !currentDisplayId || !currentBtnId) return;
   e.preventDefault();
 
   // Ignore bare modifier presses
@@ -71,7 +78,6 @@ document.addEventListener('keydown', (e) => {
   if (e.altKey) keys.push('Option');
   if (e.shiftKey) keys.push('Shift');
 
-  // Convert key names for Electron
   let mainKey = e.key.toUpperCase();
   if (mainKey === ' ') mainKey = 'Space';
   else if (mainKey === 'ARROWUP') mainKey = 'Up';
@@ -83,12 +89,20 @@ document.addEventListener('keydown', (e) => {
   const hotkeyString = keys.join('+');
 
   const input = document.getElementById(currentTargetId) as HTMLInputElement;
+  const display = document.getElementById(currentDisplayId) as HTMLDivElement;
+  const btn = document.getElementById(currentBtnId) as HTMLButtonElement;
+
   input.value = hotkeyString;
+  display.innerText = hotkeyString;
+
+  btn.classList.remove('btn-recording');
+  btn.innerText = "Record";
 
   isRecording = false;
   currentTargetId = null;
+  currentDisplayId = null;
+  currentBtnId = null;
 
-  // Send new hotkeys to main process
   const hotkeys = {
     up: (document.getElementById('hk-up') as HTMLInputElement).value,
     down: (document.getElementById('hk-down') as HTMLInputElement).value,
@@ -119,12 +133,17 @@ ipcRenderer.on('load-settings', (event, data) => {
             groqContextInput.value = data.settings.groqContext;
         }
     }
+
+    function setHotkeyState(id: string, value: string) {
+        (document.getElementById(`hk-${id}`) as HTMLInputElement).value = value;
+        (document.getElementById(`disp-${id}`) as HTMLDivElement).innerText = value;
+    }
+
     if (data.hotkeys) {
-        if (data.hotkeys.up) (document.getElementById('hk-up') as HTMLInputElement).value = data.hotkeys.up;
-        if (data.hotkeys.down) (document.getElementById('hk-down') as HTMLInputElement).value = data.hotkeys.down;
-        if (data.hotkeys.auto) (document.getElementById('hk-auto') as HTMLInputElement).value = data.hotkeys.auto;
-        if (data.hotkeys.settings) (document.getElementById('hk-settings') as HTMLInputElement).value = data.hotkeys.settings;
-        if (data.hotkeys.askGroq) (document.getElementById('hk-askGroq') as HTMLInputElement).value = data.hotkeys.askGroq;
+        if (data.hotkeys.up) setHotkeyState('up', data.hotkeys.up);
+        if (data.hotkeys.down) setHotkeyState('down', data.hotkeys.down);
+        if (data.hotkeys.auto) setHotkeyState('auto', data.hotkeys.auto);
+        if (data.hotkeys.settings) setHotkeyState('settings', data.hotkeys.settings);
+        if (data.hotkeys.askGroq) setHotkeyState('askGroq', data.hotkeys.askGroq);
     }
 });
-

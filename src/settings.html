@@ -5,130 +5,255 @@
     <title>Teleprompter Settings</title>
     <style>
       body {
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-        padding: 20px;
-        background-color: rgba(0, 0, 0, 0.7);
-        color: white;
+        margin: 0;
+        padding: 0;
+        background-color: transparent;
+        color: #e5e2e1;
+        font-family: 'Inter', -apple-system, sans-serif;
         -webkit-app-region: drag;
         height: 100vh;
-        box-sizing: border-box;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+      }
+      .app-container {
+        background-color: rgba(19, 19, 19, 0.85); /* #131313 with opacity */
+        backdrop-filter: blur(20px);
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        border: 1px solid #2a2a2a;
+        border-radius: 12px;
+        margin: 8px;
+        overflow: hidden;
+      }
+      .header {
+        padding: 16px 24px;
+        border-bottom: 1px solid #2a2a2a;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .header h2 {
         margin: 0;
-        overflow-y: auto;
+        font-size: 24px;
+        font-weight: 600;
       }
-      h2 { margin-top: 0; }
-      .setting-group {
-        margin-bottom: 20px;
-        background: rgba(255, 255, 255, 0.1);
-        padding: 15px;
-        border-radius: 8px;
-      }
-      input, button, textarea {
+      .tabs {
+        display: flex;
+        border-bottom: 1px solid #2a2a2a;
         -webkit-app-region: no-drag;
       }
-      .status { font-size: 12px; color: #ccc; }
-
+      .tab {
+        flex: 1;
+        text-align: center;
+        padding: 12px;
+        cursor: pointer;
+        font-weight: 500;
+        color: #b9cacb;
+        transition: all 0.2s;
+      }
+      .tab.active {
+        color: #00f0ff;
+        border-bottom: 2px solid #00f0ff;
+      }
+      .content {
+        flex: 1;
+        overflow-y: auto;
+        padding: 24px;
+        -webkit-app-region: no-drag;
+      }
+      .tab-content {
+        display: none;
+      }
+      .tab-content.active {
+        display: block;
+      }
+      .setting-group {
+        margin-bottom: 24px;
+        background: #1e1e1e;
+        padding: 16px;
+        border-radius: 8px;
+        border: 1px solid #2a2a2a;
+      }
       label {
         display: block;
-        margin-bottom: 5px;
-        font-weight: 500;
+        margin-bottom: 8px;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: #b9cacb;
       }
-      input[type="range"], input[type="color"], input[type="number"] {
+      input[type="range"], input[type="color"], input[type="number"], input[type="password"], input[type="text"], textarea {
         width: 100%;
-        margin-bottom: 5px;
-      }
-      .hotkey-input {
-        display: flex;
-        gap: 10px;
-        align-items: center;
-        margin-bottom: 10px;
-      }
-      .hotkey-input input {
-        flex: 1;
-        padding: 8px;
-        border: 1px solid #ccc;
-        border-radius: 4px;
-      }
-      .hotkey-input button {
-        padding: 8px 12px;
-        background: #007bff;
+        background: #0b0b0b;
+        border: 1px solid #3b494b;
         color: white;
-        border: none;
+        padding: 8px;
+        border-radius: 4px;
+        box-sizing: border-box;
+      }
+      input[type="range"] { padding: 0; }
+      input:focus, textarea:focus {
+        outline: none;
+        border-color: #00f0ff;
+        box-shadow: 0 0 4px rgba(0, 240, 255, 0.3);
+      }
+      .hotkey-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+        padding-bottom: 12px;
+        border-bottom: 1px solid #2a2a2a;
+      }
+      .hotkey-row:last-child {
+        border-bottom: none;
+        margin-bottom: 0;
+        padding-bottom: 0;
+      }
+      .hotkey-label {
+        flex: 1;
+      }
+      .hotkey-controls {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+      .hotkey-display {
+        background: #353534;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 12px;
+        min-width: 80px;
+        text-align: center;
+      }
+      button {
+        background: transparent;
+        border: 1px solid #2a2a2a;
+        color: white;
+        padding: 6px 12px;
         border-radius: 4px;
         cursor: pointer;
+        transition: all 0.2s;
       }
-      .hotkey-input button:hover {
-        background: #0056b3;
+      button:hover {
+        border-color: #00f0ff;
+        color: #00f0ff;
       }
-
+      .btn-recording {
+        border-color: #00ee70;
+        color: #00ee70;
+        box-shadow: 0 0 8px rgba(0, 238, 112, 0.4);
+      }
+      .val-display { font-size: 12px; color: #00f0ff; margin-top: 4px; text-align: right; }
     </style>
   </head>
   <body>
-    <h2>Settings</h2>
-    
-    <div class="setting-group">
-      <label>Window Transparency</label>
-      <input type="range" id="transparency" min="0" max="1" step="0.1" value="0.5">
-      <div class="status" id="transparency-val">0.5</div>
+    <div class="app-container">
+        <div class="header">
+            <h2>Settings</h2>
+        </div>
+        <div class="tabs">
+            <div class="tab active" onclick="switchTab('general')">General</div>
+            <div class="tab" onclick="switchTab('hotkeys')">Hotkeys</div>
+        </div>
+
+        <div class="content">
+            <!-- GENERAL TAB -->
+            <div id="general-tab" class="tab-content active">
+                <div class="setting-group">
+                    <label>Window Transparency</label>
+                    <input type="range" id="transparency" min="0" max="1" step="0.1" value="0.5">
+                    <div class="val-display" id="transparency-val">0.5</div>
+                </div>
+
+                <div class="setting-group">
+                    <label>Font Size (px)</label>
+                    <input type="number" id="fontSize" min="12" max="100" value="24">
+                </div>
+
+                <div class="setting-group">
+                    <label>Font Color</label>
+                    <input type="color" id="fontColor" value="#ffffff">
+                </div>
+
+                <div class="setting-group">
+                    <label>Groq API Key</label>
+                    <input type="password" id="groqApiKey" placeholder="gsk_...">
+                </div>
+
+                <div class="setting-group">
+                    <label>Groq Context (System Prompt)</label>
+                    <textarea id="groqContext" rows="4"></textarea>
+                </div>
+            </div>
+
+            <!-- HOTKEYS TAB -->
+            <div id="hotkeys-tab" class="tab-content">
+                <div class="setting-group">
+                    <div class="hotkey-row">
+                        <div class="hotkey-label">Scroll Up</div>
+                        <div class="hotkey-controls">
+                            <div class="hotkey-display" id="disp-up">Cmd+Opt+Up</div>
+                            <input type="hidden" id="hk-up">
+                            <button id="btn-hk-up" onclick="recordHotkey('hk-up', 'disp-up', 'btn-hk-up')">Record</button>
+                        </div>
+                    </div>
+                    <div class="hotkey-row">
+                        <div class="hotkey-label">Scroll Down</div>
+                        <div class="hotkey-controls">
+                            <div class="hotkey-display" id="disp-down">Cmd+Opt+Down</div>
+                            <input type="hidden" id="hk-down">
+                            <button id="btn-hk-down" onclick="recordHotkey('hk-down', 'disp-down', 'btn-hk-down')">Record</button>
+                        </div>
+                    </div>
+                    <div class="hotkey-row">
+                        <div class="hotkey-label">Auto Scroll</div>
+                        <div class="hotkey-controls">
+                            <div class="hotkey-display" id="disp-auto">Cmd+Opt+Space</div>
+                            <input type="hidden" id="hk-auto">
+                            <button id="btn-hk-auto" onclick="recordHotkey('hk-auto', 'disp-auto', 'btn-hk-auto')">Record</button>
+                        </div>
+                    </div>
+                    <div class="hotkey-row">
+                        <div class="hotkey-label">Settings</div>
+                        <div class="hotkey-controls">
+                            <div class="hotkey-display" id="disp-settings">Cmd+Opt+S</div>
+                            <input type="hidden" id="hk-settings">
+                            <button id="btn-hk-settings" onclick="recordHotkey('hk-settings', 'disp-settings', 'btn-hk-settings')">Record</button>
+                        </div>
+                    </div>
+                    <div class="hotkey-row">
+                        <div class="hotkey-label">Ask Groq</div>
+                        <div class="hotkey-controls">
+                            <div class="hotkey-display" id="disp-askGroq">Cmd+Opt+G</div>
+                            <input type="hidden" id="hk-askGroq">
+                            <button id="btn-hk-askGroq" onclick="recordHotkey('hk-askGroq', 'disp-askGroq', 'btn-hk-askGroq')">Record</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
-
-    <div class="setting-group">
-      <label>Font Size (px)</label>
-      <input type="number" id="fontSize" min="12" max="100" value="24">
-    </div>
-
-    <div class="setting-group">
-      <label>Font Color</label>
-      <input type="color" id="fontColor" value="#ffffff">
-    </div>
-
-
-    <div class="setting-group">
-      <label>Groq API Key</label>
-      <input type="password" id="groqApiKey" placeholder="gsk_...">
-    </div>
-
-    <div class="setting-group">
-      <label>Groq Context (System Prompt)</label>
-      <textarea id="groqContext" rows="3" style="width: 100%; margin-bottom: 5px;"></textarea>
-    </div>
-
-    <div class="setting-group">
-      <label>Hotkeys</label>
-      <div class="status">Click "Record" and press combination (e.g. Cmd+Shift+Up)</div>
-      
-      <div class="hotkey-input">
-        <label style="width: 80px;">Scroll Up:</label>
-        <input type="text" id="hk-up" readonly value="CommandOrControl+Option+Up">
-        <button onclick="recordHotkey('hk-up')">Record</button>
-      </div>
-
-      <div class="hotkey-input">
-        <label style="width: 80px;">Scroll Down:</label>
-        <input type="text" id="hk-down" readonly value="CommandOrControl+Option+Down">
-        <button onclick="recordHotkey('hk-down')">Record</button>
-      </div>
-
-      <div class="hotkey-input">
-        <label style="width: 80px;">Auto Scroll:</label>
-        <input type="text" id="hk-auto" readonly value="CommandOrControl+Option+Space">
-        <button onclick="recordHotkey('hk-auto')">Record</button>
-      </div>
-      
-      <div class="hotkey-input">
-        <label style="width: 80px;">Settings:</label>
-        <input type="text" id="hk-settings" readonly value="CommandOrControl+Option+S">
-        <button onclick="recordHotkey('hk-settings')">Record</button>
-      </div>
-
-      <div class="hotkey-input">
-        <label style="width: 80px;">Ask Groq:</label>
-        <input type="text" id="hk-askGroq" readonly value="CommandOrControl+Option+G">
-        <button onclick="recordHotkey('hk-askGroq')">Record</button>
-      </div>
-    </div>
-
 
     <script>
+      function switchTab(tabName) {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+
+        if (tabName === 'general') {
+            document.querySelectorAll('.tab')[0].classList.add('active');
+            document.getElementById('general-tab').classList.add('active');
+        } else {
+            document.querySelectorAll('.tab')[1].classList.add('active');
+            document.getElementById('hotkeys-tab').classList.add('active');
+        }
+      }
+
       require('../dist/settingsRenderer.js');
     </script>
   </body>

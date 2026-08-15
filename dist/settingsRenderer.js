@@ -40,17 +40,23 @@ groqContextInput.addEventListener('input', sendSettingsUpdate);
 // Hotkey Recording Logic
 let isRecording = false;
 let currentTargetId = null;
-window.recordHotkey = (targetId) => {
+let currentDisplayId = null;
+let currentBtnId = null;
+window.recordHotkey = (targetId, displayId, btnId) => {
     if (isRecording)
         return;
     isRecording = true;
     currentTargetId = targetId;
-    const input = document.getElementById(targetId);
-    input.value = "Press keys...";
-    input.focus();
+    currentDisplayId = displayId;
+    currentBtnId = btnId;
+    const display = document.getElementById(displayId);
+    const btn = document.getElementById(btnId);
+    display.innerText = "Press...";
+    btn.classList.add('btn-recording');
+    btn.innerText = "Recording";
 };
 document.addEventListener('keydown', (e) => {
-    if (!isRecording || !currentTargetId)
+    if (!isRecording || !currentTargetId || !currentDisplayId || !currentBtnId)
         return;
     e.preventDefault();
     // Ignore bare modifier presses
@@ -66,7 +72,6 @@ document.addEventListener('keydown', (e) => {
         keys.push('Option');
     if (e.shiftKey)
         keys.push('Shift');
-    // Convert key names for Electron
     let mainKey = e.key.toUpperCase();
     if (mainKey === ' ')
         mainKey = 'Space';
@@ -81,10 +86,16 @@ document.addEventListener('keydown', (e) => {
     keys.push(mainKey);
     const hotkeyString = keys.join('+');
     const input = document.getElementById(currentTargetId);
+    const display = document.getElementById(currentDisplayId);
+    const btn = document.getElementById(currentBtnId);
     input.value = hotkeyString;
+    display.innerText = hotkeyString;
+    btn.classList.remove('btn-recording');
+    btn.innerText = "Record";
     isRecording = false;
     currentTargetId = null;
-    // Send new hotkeys to main process
+    currentDisplayId = null;
+    currentBtnId = null;
     const hotkeys = {
         up: document.getElementById('hk-up').value,
         down: document.getElementById('hk-down').value,
@@ -114,16 +125,20 @@ electron_1.ipcRenderer.on('load-settings', (event, data) => {
             groqContextInput.value = data.settings.groqContext;
         }
     }
+    function setHotkeyState(id, value) {
+        document.getElementById(`hk-${id}`).value = value;
+        document.getElementById(`disp-${id}`).innerText = value;
+    }
     if (data.hotkeys) {
         if (data.hotkeys.up)
-            document.getElementById('hk-up').value = data.hotkeys.up;
+            setHotkeyState('up', data.hotkeys.up);
         if (data.hotkeys.down)
-            document.getElementById('hk-down').value = data.hotkeys.down;
+            setHotkeyState('down', data.hotkeys.down);
         if (data.hotkeys.auto)
-            document.getElementById('hk-auto').value = data.hotkeys.auto;
+            setHotkeyState('auto', data.hotkeys.auto);
         if (data.hotkeys.settings)
-            document.getElementById('hk-settings').value = data.hotkeys.settings;
+            setHotkeyState('settings', data.hotkeys.settings);
         if (data.hotkeys.askGroq)
-            document.getElementById('hk-askGroq').value = data.hotkeys.askGroq;
+            setHotkeyState('askGroq', data.hotkeys.askGroq);
     }
 });

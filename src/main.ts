@@ -1,6 +1,10 @@
 import { app, BrowserWindow, globalShortcut, ipcMain, screen, session } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs';
+import { exec } from 'child_process';
+const ffmpegStatic = require('ffmpeg-static');
+const whisper = require('whisper-node');
+
 
 let teleprompterWindow: BrowserWindow | null = null;
 let settingsWindow: BrowserWindow | null = null;
@@ -75,8 +79,9 @@ function registerHotkeys() {
 
   if (config.hotkeys.settings) {
     globalShortcut.register(config.hotkeys.settings, () => {
-      if (settingsWindow) {
-        settingsWindow.focus();
+      if (settingsWindow && !settingsWindow.isDestroyed()) {
+        settingsWindow.close();
+        settingsWindow = null;
       } else {
         createSettingsWindow();
       }
@@ -171,6 +176,79 @@ function createSettingsWindow() {
 }
 
 // IPC Handlers
+
+
+let transcriptionQueue: Buffer[] = [];
+let isTranscribing = false;
+
+async function processTranscriptionQueue() {
+  if (isTranscribing || transcriptionQueue.length === 0) return;
+  isTranscribing = true;
+
+  const buffer = transcriptionQueue.shift();
+  if (!buffer) {
+    isTranscribing = false;
+    return;
+  }
+
+  const tempWebmPath = path.join(app.getPath('temp'), `chunk_${Date.now()}.webm`);
+  const tempWavPath = path.join(app.getPath('temp'), `chunk_${Date.now()}.wav`);
+
+  fs.writeFileSync(tempWebmPath, buffer);
+
+  // Use ffmpeg-static to convert to 16kHz mono wav
+  exec(`"${ffmpegStatic}" -y -i "${tempWebmPath}" -ar 16000 -ac 1 -c:a pcm_s16le "${tempWavPath}"`, async (error) => {
+    if (error) {
+      console.error("FFmpeg conversion error:", error);
+      isTranscribing = false;
+      try { fs.unlinkSync(tempWebmPath); } catch (e) {}
+      processTranscriptionQueue();
+      return;
+    }
+
+    try {
+      // Model should ideally be in a user data folder or packaged with the app,
+      // but for this implementation we rely on the downloaded one via whisper-node's script
+      // as documented in the README.
+      const modelPath = path.join(process.cwd(), 'models', 'ggml-tiny.en.bin');
+
+      if (!fs.existsSync(modelPath)) {
+         transcriptionWindow?.webContents.send('transcription-chunk-result', '[Error: Local Whisper Model not found. See README] ');
+      } else {
+          const transcript = await whisper.whisper(tempWavPath, {
+            modelPath: modelPath,
+            whisperOptions: {
+                language: 'en',
+                gen_file_txt: false,
+                gen_file_subtitle: false,
+                gen_file_vtt: false,
+                word_timestamps: false
+            }
+          });
+
+          let text = "";
+          if (transcript && transcript.length > 0) {
+            text = transcript.map((t: any) => t.speech).join(" ");
+          }
+
+          if (transcriptionWindow && text.trim().length > 0) {
+            transcriptionWindow.webContents.send('transcription-chunk-result', text);
+          }
+      }
+    } catch (err) {
+       console.error("Whisper error:", err);
+    } finally {
+        isTranscribing = false;
+        try { fs.unlinkSync(tempWebmPath); fs.unlinkSync(tempWavPath); } catch (e) {}
+        processTranscriptionQueue();
+    }
+  });
+}
+
+ipcMain.on('audio-chunk', (event, buffer) => {
+  transcriptionQueue.push(buffer);
+  processTranscriptionQueue();
+});
 
 ipcMain.on('transcription-result', async (event, text) => {
   if (!text || text.trim() === "") {
