@@ -5,6 +5,8 @@ const transparencyInput = document.getElementById('transparency');
 const transparencyVal = document.getElementById('transparency-val');
 const fontSizeInput = document.getElementById('fontSize');
 const fontColorInput = document.getElementById('fontColor');
+const groqApiKeyInput = document.getElementById('groqApiKey');
+const groqContextInput = document.getElementById('groqContext');
 // Debounce helper
 function debounce(func, wait) {
     let timeout;
@@ -22,6 +24,8 @@ const sendSettingsUpdate = debounce(() => {
         transparency: parseFloat(transparencyInput.value),
         fontSize: parseInt(fontSizeInput.value, 10),
         fontColor: fontColorInput.value,
+        groqApiKey: groqApiKeyInput.value,
+        groqContext: groqContextInput.value,
     };
     electron_1.ipcRenderer.send('save-settings', settings);
 }, 200);
@@ -31,6 +35,8 @@ transparencyInput.addEventListener('input', () => {
 });
 fontSizeInput.addEventListener('input', sendSettingsUpdate);
 fontColorInput.addEventListener('input', sendSettingsUpdate);
+groqApiKeyInput.addEventListener('input', sendSettingsUpdate);
+groqContextInput.addEventListener('input', sendSettingsUpdate);
 // Hotkey Recording Logic
 let isRecording = false;
 let currentTargetId = null;
@@ -84,6 +90,7 @@ document.addEventListener('keydown', (e) => {
         down: document.getElementById('hk-down').value,
         auto: document.getElementById('hk-auto').value,
         settings: document.getElementById('hk-settings').value,
+        askGroq: document.getElementById('hk-askGroq').value,
     };
     electron_1.ipcRenderer.send('save-hotkeys', hotkeys);
 });
@@ -100,6 +107,12 @@ electron_1.ipcRenderer.on('load-settings', (event, data) => {
         if (data.settings.fontColor !== undefined) {
             fontColorInput.value = data.settings.fontColor;
         }
+        if (data.settings.groqApiKey !== undefined) {
+            groqApiKeyInput.value = data.settings.groqApiKey;
+        }
+        if (data.settings.groqContext !== undefined) {
+            groqContextInput.value = data.settings.groqContext;
+        }
     }
     if (data.hotkeys) {
         if (data.hotkeys.up)
@@ -110,5 +123,7 @@ electron_1.ipcRenderer.on('load-settings', (event, data) => {
             document.getElementById('hk-auto').value = data.hotkeys.auto;
         if (data.hotkeys.settings)
             document.getElementById('hk-settings').value = data.hotkeys.settings;
+        if (data.hotkeys.askGroq)
+            document.getElementById('hk-askGroq').value = data.hotkeys.askGroq;
     }
 });
