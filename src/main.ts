@@ -124,6 +124,8 @@ function createTranscriptionWindow() {
     x: width - windowWidth,
     y: 0,
     title: "Live Transcription",
+    transparent: true,
+    frame: false,
     alwaysOnTop: true,
     webPreferences: {
       nodeIntegration: true,
@@ -144,8 +146,11 @@ function createSettingsWindow() {
 
   settingsWindow = new BrowserWindow({
     width: 400,
-    height: 500,
+    height: 550,
     title: "Teleprompter Settings",
+    transparent: true,
+    frame: false,
+    alwaysOnTop: true,
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false,

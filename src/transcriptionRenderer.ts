@@ -13,7 +13,21 @@ function updateDisplay() {
 // Check for Web Speech API support
 const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
-if (SpeechRecognition) {
+async function startSpeechRecognition() {
+    if (!SpeechRecognition) {
+        transcriptionDiv.innerText = "Web Speech API is not supported in this environment.";
+        return;
+    }
+
+    try {
+        // Explicitly request microphone access to trigger macOS permission prompt and initialize audio engine properly
+        await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch (err) {
+        console.error("Microphone access denied or error:", err);
+        transcriptionDiv.innerText = "Please grant microphone permissions in System Settings.";
+        return;
+    }
+
     const recognition = new SpeechRecognition();
     recognition.continuous = true;
     recognition.interimResults = true;
@@ -40,19 +54,31 @@ if (SpeechRecognition) {
 
     recognition.onerror = (event: any) => {
         console.error("Speech recognition error:", event.error);
+        // Do not display error text for common non-fatal errors like 'no-speech'
+        if (event.error !== 'no-speech') {
+            console.warn(`Speech recognition stopped due to error: ${event.error}`);
+        }
     };
 
     recognition.onend = () => {
-        // Automatically restart if it stops (unless we intentionally stopped it, but we won't for this use case)
+        // Automatically restart if it stops
         console.log("Speech recognition ended, restarting...");
-        recognition.start();
+        try {
+            recognition.start();
+        } catch(e) {
+            console.error("Failed to restart recognition", e);
+        }
     };
 
     // Start immediately
-    recognition.start();
-} else {
-    transcriptionDiv.innerText = "Web Speech API is not supported in this environment.";
+    try {
+        recognition.start();
+    } catch(e) {
+        console.error("Failed to start recognition", e);
+    }
 }
+
+startSpeechRecognition();
 
 // Handle request from main process to get transcription for Groq
 ipcRenderer.on('get-transcription', () => {
